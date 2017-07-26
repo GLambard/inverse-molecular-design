@@ -24,6 +24,7 @@ OpenBabel is compulsory to the check of the validity for the generated SMILES an
 
 * Finally, install ```iqspr``` by using the package ```devtools```
 ```R
+install.packages("devtools") # if you don't already have it
 library(devtools)
 install_github("glambard/inverse-molecular-design",subdir="iqspr")
 ```
