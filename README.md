@@ -12,15 +12,15 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 
 # Let's get started
 
-* Install JAVA JDK 1.7 or higher from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+* Install JAVA JDK >= 1.7 from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 
-(for issues concerning the intallation of rJava, a dependency of the rcdk package, on MAC OS X, please follow these links [here](https://github.com/snowflakedb/dplyr-snowflakedb/wiki/Configuring-R-rJava-RJDBC-on-Mac-OS-X) and [here](http://stackoverflow.com/questions/30738974/rjava-load-error-in-rstudio-r-after-upgrading-to-osx-yosemite))
+(for issues concerning the intallation of ```rJava```, a dependency of the ```rcdk``` package included in ```iqspr```, on MAC OS X, please follow these links [here](https://github.com/snowflakedb/dplyr-snowflakedb/wiki/Configuring-R-rJava-RJDBC-on-Mac-OS-X) and [here](http://stackoverflow.com/questions/30738974/rjava-load-error-in-rstudio-r-after-upgrading-to-osx-yosemite))
 
-* Install the OpenBabel version 2.3.1 or higher with headers from [here](http://openbabel.org).
+* Install the OpenBabel >= 2.3.1 with headers from [here](http://openbabel.org).
 
-OpenBabel is compulsory to the check of the validity for the generated SMILES and the re-ordering of these. 
+OpenBabel is compulsory to the check of the validity for the generated SMILES and their re-ordering. 
 
-* __(Optional)__ Install mxnet version 0.9.4 or higher for the deep learning regression capabilities from [here](http://mxnet.io/get_started/setup.html).
+* __(Optional)__ Install mxnet >= 0.9.4 for the deep learning regression capabilities from [here](http://mxnet.io/get_started/setup.html).
 
 * Finally, install ```iqspr``` by using the package ```devtools```
 ```R
