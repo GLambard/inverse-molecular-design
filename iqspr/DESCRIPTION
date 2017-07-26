@@ -1,0 +1,34 @@
+Package: iqspr
+Title: Inverse Molecular Design
+Version: 2.3
+Author: Guillaume Lambard [aut, cre],
+        Hisaki Ikebata [cre],
+        Ryo Yoshida [cre]
+Maintainer: Guillaume Lambard <lambard@ism.ac.jp>
+Description: iqspr is devoted to the autonomous generation of novel organic compounds with target physico-chemical properties 
+ initially constrained by the user. This package has the ambition to become an unavoidable tool in the innovation of novel 
+ materials and/or drugs with specific target properties. 
+Depends: R (>= 3.3.3), 
+         fingerprint (>= 3.5.4), 
+         rcdk (>= 3.3.8)
+Imports: methods, 
+         glmnet (>= 2.0-5), 
+         kernlab (>= 0.9-25), 
+         ranger (>= 0.6.0),
+         xgboost (>= 0.6-4), 
+         doParallel (>= 1.0.10), 
+         tictoc(>= 1.0),
+         ggplot2(>= 2.2.1), 
+         gridExtra(>= 2.2.1), 
+         rBayesianOptimization(>= 1.1.0)
+License: MIT + file LICENSE
+SystemRequirements: JAVA JDK 1.7 or higher for rcdk, 
+  OpenBabel (>= 2.3.1) with headers, http://openbabel.org,
+  mxnet (>= 0.9.4) for the deep learning capabilities, http://mxnet.io/get_started/setup.html
+Suggests: knitr,
+    rmarkdown
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1.9000
+NeedsCompilation: no
+VignetteBuilder: knitr

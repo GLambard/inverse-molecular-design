@@ -1,0 +1,525 @@
+---
+title: "Tutorial for the package iqspr v2.3"
+author: "Guillaume Lambard"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+The structure of chemical species can be uniquely encoded in a single string of standard text characters called SMILES (Simplified Molecular Input Line Entry Specification). A very nice presentation of the SMILES notation can be found [here](http://www.daylight.com/dayhtml/doc/theory/theory.smiles.html). If one knows the SMILES of a chemical compound, its 
+2D structure can be univoquely re-constructed. One of the aspect of the SMILES format is that it's particularly useful in the 
+prediction of properties of compounds. The link that exists between the structure of a compound and its properties is generally called a QSPR (Quantitative Structure-Properties Relationship), and it has been widely used in cheminformatics for the design of new compounds. Generally, compounds structures are primarily investigated by chemists following a trial-and-error construction controlled by their existing knowledge of the chemistry and their intuition. The properties of the investigated 
+compounds are then checked by direct experiments and/or driven by a QSPR analysis. In this kind of analysis, numerous descriptors can be build from the SMILES format. These descriptors can be represented a set of binary and/or continuous properties based on the existence of certain fragments in a molecule, or on the ability of its bonds to rotate for example. An introduction and overview concerning the molecular descriptors can be found [here](http://www.moleculardescriptors.eu/tutorials/tutorials.htm). Then, the descriptors are parsed as input features for a given regression model to predict output properties for a list of novel compounds. This kind of reconstruction of the properties of compounds from descriptors is called a forward prediction. 
+
+__This package is entirely devoted to__ the inverse problem which is the backward prediction. __The generation of entirely novel SMILES in output, and consequently chemical compounds, from input targeted properties initially constrained by a user__. Thanks to the inverse-QSPR model([via](https://link.springer.com/article/10.1007%2Fs10822-016-0008-z)), this is now possible. This package has the ambition to become a useful tool, in the innovation of novel materials, in a field that is now widely referred as Materials Informatics. It is important to note that as SMILES is the basis format for this package, only organic molecular non-crystalline compounds can be generated. 
+
+# Let's get started
+
+* Install JAVA JDK 1.7 or higher from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+
+(for issues concerning the intallation of rJava, a dependency of the rcdk package, on MAC OS X, please follow these links [here](https://github.com/snowflakedb/dplyr-snowflakedb/wiki/Configuring-R-rJava-RJDBC-on-Mac-OS-X) and [here](http://stackoverflow.com/questions/30738974/rjava-load-error-in-rstudio-r-after-upgrading-to-osx-yosemite))
+
+* Install the OpenBabel version 2.3.1 or higher with headers from [here](http://openbabel.org).
+
+OpenBabel is compulsory to the check of the validity for the generated SMILES and the re-ordering of these. 
+
+* __(Optional)__ Install mxnet version 0.9.4 or higher for the deep learning regression capabilities from [here](http://mxnet.io/get_started/setup.html).
+
+# How does it work
+
+The __iqspr__ package takes initial datasets of SMILES with their known physico-chemical properties (HOMO-LUMO gap, internal energy, melting point, toxicity, solubility, etc.) as input. Then, the SMILES are transformed in their corresponding descriptors to construct a vector of features per compound. Linear or non-linear regression models are then trained with these vectors in input, and given properties in output, to form the forward prediction model. This done, the natural language processing principle is used to build n-grams from a list of known SMILES to build a chemical grammar. Once the model for the chemical grammar is 
+formed, a generator of SMILES is then available. This generator corresponds to the prior knownledge about viable chemical compounds, i.e. chemically possible, stable and which tend to be synthesizable. Finally, following the Bayes law, prior knowledge and forward prediction models, i.e. the likelihoods of a chemical structure to possess a certain property, can be linked to emulate the posterior, i.e. the probability that a given property can be represented by a given structure. Technically, thanks to a SMC (sequential Monte-Carlo), the prior distribution of possible structures is sampled (SMILES are sequentially modified character-by-character), the properties of the generated structures are predicted via the forward model, and these structures are then again transformed according to the distance of their properties to the target properties space. 
+__To resume, thanks to a character-wise directed modification of SMILES, according to a prior knownledge of realistic chemical compounds, coupled to the forward model predictions, entirely novel SMILES with desired properties are autonomously generated.__
+
+# Practice
+
+In this tutorial of the package **iqspr** v2.3, you will learn how to: 
+
+* set a prediction environment for your dataset
+* train a regression model in the prediction environment
+* predict new properties for a test set of SMILES, and plot the results via the **ggplot2** package
+* set a targeted properties space for novel chemical structures to be generated
+* learn a chemical grammar from a list of existing SMILES
+* generate novel SMILES with targeted properties
+* visualize the results
+
+## Prediction environment setup
+
+First of all, let's call the necessary libraries to this tutorial:
+```{r}
+library(iqspr)
+library(ggplot2)
+library(gridExtra) # for multiple plots on a page
+```
+
+Then, let's load the data provided with the **iqspr** package:
+```{r}
+data("qspr.data")
+dim(qspr.data)
+head(qspr.data)
+```
+
+This dataset contains 16674 SMILES with 2 related properties, the internal energy *E* (kJ/mol) and the *HOMO-LUMO gap* (eV). They are both issued from single-point calculations in DFT (density functional theory) simulations, with compounds geometry optimized at the B3LYP/6-31G(d) level of theory using [GAMESS](http://www.msg.ameslab.gov/gamess/).
+
+Let's now create a character vector of SMILES and a matrix containing the 2 properties:
+```{r}
+smis <- as.character(qspr.data[,1])
+prop <- as.matrix(qspr.data[,c(2,3)])
+```
+
+Let's define the training and testing sets, with related properties, chosen randomly over the whole dataset:
+```{r fig.width=4, fig.height=4, fig.align='center'}
+trainidx <- sample(1:nrow(qspr.data), 1000)
+testidx <- sample((1:nrow(qspr.data))[-trainidx], 500)
+dt <- data.frame(prop[trainidx,])
+colnames(dt) <- c("E","HOMOLUMOgap")
+ggplot(data = dt, aes(x = E, y = HOMOLUMOgap)) + geom_point(size=0.4, color="black") +
+  labs(x="E", y="HOMO-LUMO gap", title="Initial dataset") + ylim(c(0,max(prop[,2]))) + xlim(c(0,max(prop[,1]))) + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Then, the prediction environment can be set up: (this may take few mins)
+```{r}
+qsprpred_env <- QSPRpred()
+qsprpred_env$init_env(smis=smis[trainidx], prop=prop[trainidx,], v_fnames=c("standard","extended","circular"))
+```
+
+*qsprpred_env* is defined as the prediction environment implemented as the *QSPRpred* class. Then, the *init_env* method allows to properly initialize the environment with the input (SMILES,properties) couple. A matrix of chosen descriptors (here as binary "standard","extended" and "circular" fingerprints) are implicitly computed as features for the regression model to come. 
+
+One can have a look to the full list of available descriptors, via the command:
+```{r}
+get_descriptors()
+```
+
+From "standard" to "circular", they are all binary fingerprints. "topological", "constitutional" and "electronic" are physical continuous descriptors (see [rcdk](https://cran.r-project.org/web/packages/rcdk/rcdk.pdf) for details). Keep in mind that the physical descriptors are much more time-consuming to be calculated than their binary counterparts by an order of magnitude or more. However, they could allow slightly better predictions depending on the dataset.
+ 
+## Regression models training
+
+Now that the prediction environment *qsprpred_env* is defined, let's have a look to the computed features:
+```{r}
+features <- qsprpred_env$get_features()
+length(features)
+lapply(features,dim)
+```
+
+The returned object is a list of 2 features matrices (for prediction of 2 properties), where the numbers of rows match the numbers of SMILES in *smis[trainidx]*, and the numbers of columns match the numbers of features added of an intercept (=1 by definition). 
+
+The provided properties to *qsprpred_env* can also be inspected by calling:
+```{r}
+properties <- qsprpred_env$get_props()
+length(properties)
+lapply(properties,dim)
+```
+
+Same comment than for the *features* except that the *properties* list contains numerical vectors, or single-column matrices, containing one property per SMILES. 
+
+Now, let's train the regression models: (this may take from few mins to hours depending on your dataset and system capabilities)
+```{r, eval=TRUE, include=TRUE}
+#qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = #0.85,r_boot = F,parallelize=T)
+qsprpred_env$model_training(model=c("linear_Bayes"),params=NA)
+```
+
+1. Two different models, "linear_Bayes" and "ranger", have been chosen as regression models which will predict respectively the internal energy *E* and the *HOMO-LUMO gap*. Note that the names for the regression models are represented by their nicknames in *model*. These nicknames are an internal representation of the different implemented regression models in this package. Their list, with their usual names from literature, related packages as the functions implicitly called for the models training, can be found via:
+```{r}
+get_Models()
+```
+
+Please note once more that for "deeplearning", the mxnet package should be initially installed from [here](http://mxnet.io/get_started/setup.html) according to your system (Windows/MACOSX/Linux). 
+
+2. Two different sets of parameters, *params=list(list(NA),list("num.trees" = 200))*, have been respectively assigned to the two regression models. Then, one can easily change fixed paramaters for a given regression model in the extent of the model capabilities. For this last restriction, the user must refer to the packages documentation. However, one can access the default parameters given to the different regression models via:
+```{r}
+get_Model_params("elasticnet")
+```
+
+Here, the "elasticnet" mixing parameter *alpha* is specified. All the other parameters are then fixed to the default values instantiated by the original glmnet package. Then, one can extend the list of fixed parameters. To come back to the case of "ranger" used earlier for the training, which is a fast implementation of Random Forest (see [here](https://cran.r-project.org/web/packages/ranger/ranger.pdf) for details), the requested fixed parameters can take the simple form of:
+```{r}
+get_Model_params("ranger")
+```
+
+Then, *params=list("num.trees" = 200)* can take a more detailed form such as *params=list("num.trees" = 200, "mtry" = 3000, "min.node.size" = 7, "replace" = FALSE, "sample.fraction" = 0.8)*, where here the number of variables to possibly split at each node *mtry* (<= to the number of features: 3073), a minimal node size *min.node.size* and a certain fraction of observations for the sampling without replacement are modified. For all the regression models used in the **iqspr** package, all the tuning parameters are reachable. By the end of this tutorial, a short guide on how to fix a model's parameters thanks to Bayesian optimization will be emphasized. 
+
+3. *n_boot*, *s_boot*, *r_boot*, *parallelize* are relatives to the bootstrap analysis. Unlike a Bayesian linear regression, a bootstrap analysis can be automatically performed in order to determine the variance over consequent predictions of a regression model. 
++ *n_boot* refers to the number of bootstrap sampling to use (higher is better (>100) but time-consuming)
++ *s_boot* is the fraction of observations to use in the data sampling
++ *r_boot* sample with replacement or not
++ *parallelize* with tasks parallelization (recommanded) or not.
+
+4. Following the training of requested regression models, a file is created per model in the working directory as <*modelname*_params_*digits*.Rda>. This file contains trained regression models with their attributes. The number of models 
+in a file will vary with the number of bootstrap samples *n_boot*. 
+
+## Predictions
+
+Now that a bunch of regression models are trained, let's have a look to the prediction step: 
+```{r}
+predictions <- qsprpred_env$qspr_predict(smis[testidx])
+```
+
+Similar to the *predict* function in the **stats** package, the *qspr_predict()* method predicts properties from SMILES using corresponding regression models (assigned earlier during the training). SMILES are transformed in their "standard", "extended" and "circular" fingerprints here, the features, then the properties are returned as a list of two matrices. One contains the predictions and the second the variances over these predictions deduced from bootstrap analysis outcomes. 
+```{r}
+# Example for 4 compounds
+cat("Predictions:\n")
+rownames(predictions[[1]]) <- c("E","HOMO-LUMO gap")
+predictions[[1]][,1:4] # predictions
+cat("\nVariances:\n")
+rownames(predictions[[2]]) <- c("E","HOMO-LUMO gap")
+predictions[[2]][,1:4] # variances
+```
+
+Let's have a look to how well the regression models have performed:
+```{r fig.width=8, fig.height=4, fig.align='center'}
+d1 <- data.frame(predictions[[1]][1,],prop[testidx,"E"],sqrt(predictions[[2]][1,]))
+colnames(d1) <- c("pred","prop","sd")
+d2 <- data.frame(predictions[[1]][2,],prop[testidx,"HOMO-LUMO gap"],sqrt(predictions[[2]][2,]))
+colnames(d2) <- c("pred","prop","sd")
+
+prd.obs.rmse1 <- round(sqrt(sum((predictions[[1]][1,] - prop[testidx,"E"])^2) / length(testidx)),digits = 1)
+prd.obs.corr1 <- round(cor(predictions[[1]][1,],prop[testidx,"E"]),digits = 2)
+prd.obs.rmse2 <- round(sqrt(sum((predictions[[1]][2,] - prop[testidx,"HOMO-LUMO gap"])^2) / length(testidx)),digits = 1)
+prd.obs.corr2 <- round(cor(predictions[[1]][2,],prop[testidx,"HOMO-LUMO gap"]),digits = 2)
+
+minmaxx <- c(min(d1[,1]),max(d1[,1]))
+minmaxy <- c(min(d1[,2]),max(d1[,2]))
+p1 <- ggplot(data = d1, aes(x = pred, y = prop, size=sd)) + geom_point(color="cyan3") + geom_point(shape=1, alpha=0.4) +
+  labs(x="predictions", y="observations", title="E") + ylim(minmaxy) + xlim(minmaxx) + 
+  guides(size=guide_legend(title="s.d.")) + 
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1, alpha = 0.5) +
+  annotate("text", x = c(100,100), y = c(max(d1[,"prop"])-100,max(d1[,"prop"])-70), label = c(paste("RMSE:",prd.obs.rmse1), paste("COR:",prd.obs.corr1)) , color="black", size=3, angle=0, fontface="bold") +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+minmaxx <- c(min(d2[,1]),max(d2[,1]))
+minmaxy <- c(min(d2[,2]),max(d2[,2]))
+p2 <- ggplot(data = d2, aes(x = pred, y = prop, size = sd)) + geom_point(color="deepskyblue") + geom_point(shape=1, alpha=0.4) +
+  labs(x="predictions", y="observations", title="HOMO-LUMO gap") + ylim(minmaxy) + xlim(minmaxx) + 
+  guides(size=guide_legend(title="s.d.")) + 
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1, alpha = 0.5) +
+  annotate("text", x = c(5,5), y = c(max(d2[,"prop"])-1.5,max(d2[,"prop"])-1), label = c(paste("RMSE:",prd.obs.rmse2), paste("COR:",prd.obs.corr2)) , color="black", size=3, angle=0, fontface="bold") +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(p1,p2,ncol=2)
+```
+
+The predictions versus observations plots reveal correlations (COR) and root mean squared errors (RMSE) for *E* and *HOMO-LUMO gap*. The prediction capabilities of different regression algorithms on the microscopic properties of organic compounds aren't to be adressed in details in this tutorial. But one can see that, even without fine tuning of the parameters or a particular choice on a best performing algorithm on these data, the prediction environment of the **iqspr** package performs well. This gives to the package an efficient forward capability to be used as a likelihood in the generation of SMILES. 
+
+## Targeting a properties space
+
+Now that the forward model is ready, let's define a properties space for which new compounds are desired. The method *set_target()* is used to this effect:
+```{r}
+targ.min <- c(50,2)
+targ.max <- c(250,4)
+qsprpred_env$set_target(targ.min,targ.max)
+```
+
+Two numerical vectors are supplied as minimum and maximum of the properties space. Two boundaries that can have any number of dimensions depending on the number of properties initially present in the dataset. A target properties space in $E \in [100;200]$ and $HOMO-LUMO\,gap \in [1;2]$ is required. 
+
+## Chemical grammar learning
+
+The learning of a chemical grammar through the generation of multiple n-grams is greatly simplified in **iqspr** thanks to the **ENgram** class:
+```{r, eval=FALSE, include=TRUE}
+data("trainedSMI")
+engram_5k <- ENgram$new(trainedSMI, order=10)
+```
+Based a list of 5000 SMILES, rather small for the purpose of this tutorial, n-grams of order n from 1 to 10 are built. This model for the chemical language represents the prior in the inverse-QSPR principle from which it is now possible to generate viable SMILES, novel or not. Because of the length of the input SMILES vector here, the novelty of generated SMILES are particularly limited. Bigger and diverse will be the vector of SMILES in input, deeper will be the chemical language in its ability to catch the semantic of SMILES, and larger will be the proportion to produce novel SMILES with un-categorized physico-chemical properties. 
+
+## SMILES generation in targeted properties space
+
+Let's now initialize the SMC (sequential Monte-Carlo) environment, generate new SMILES with targeted properties and visualize them.
+
+1. The SMC environment can be initialized as follows:
+```{r}
+data("engram_5k")
+smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,300))
+```
+
+100 SMILES of equivalent structures (e.g. a phenol here) are submitted to initialize 100 SMC processes that will sequentially produce new SMILES. As the subsequent SMILES modifications or evolutions depend on their capabilities to reach a targeted properties space, their properties are adressed by the trained forward model in *qsprpred_env*. The *engram_5k* is submitted to serve as the prior for the SMILES generator. Finally, a temperature is set as a numerical vector *v_temp* for both properties. This temperature decreases along the annealing process in a SMC until it reaches 1. This decrease follows a decay rate fixed at 0.95 by default in *SmcChem$new*, but it can be tuned via *v_decay* (see the *SmcChem* class documentation for further details and options).  
+
+2. Let's start to run the SMC process: (this may take from few mins to hours depending on the number of loops)
+```{r, results='hide'}
+for(i in 1:200){
+  smchem$smcexec(niter = 2, nsteps = 7, preorder = 0.2)
+}
+```
+
+Basically, at each SMC iteration *i*
++ A re-ordering *preorder* of the SMILES is performed randomly over *0.2**100 % of them thanks to OpenBabel.   
++ m rightmost letters are deleted, with $m \sim B(m|L,\eta)$ a binomial probability (L = *nsteps = 5*, $\eta=0.5$).
++ sequentially extend the reduced string by adding a new letter at the terminal point $L-m$ times. A newly added letter follows the prior (trained language model).
++ Once the termination code "$" appears, the elongation is stopped and a new SMILES is created. 
+
+This is performed over the 100 identical SMILES submitted earlier. 
+
+Note that the structure of the chosen SMILES in the initial step has no importance. They can be un-identical and sampled from an existing dataset. Also, higher the number of initial SMILES (100 here) is, higher the plurality of output SMILES will be. In particular when the initial SMILES are chosen as identical, a high number ($\geq 100$) reduces redundancies and increases the number of output SMILES with weak amount of similarities. 
+
+Let's have a look to the output SMILES string presenting the highest score, i.e. having the highest probability to have reached the targeted properties space:
+```{r, fig.width=4, fig.height=4, fig.align='center'}
+gensmis <- smchem$get_hiscores(nsmi=200, exsim=0.9)
+head(gensmis)
+```
+
+*nsmi=200* generated SMILES and their relative scores are here listed. The tanimoto similarity index of *exsim=0.9* is requested as an upper limit among these SMILES. 
+
+But, what about their properties:
+```{r}
+pred <- qsprpred_env$qspr_predict(gensmis[,1])
+predmat <- t(pred[[1]]) 
+
+dpred <- data.frame(predmat)
+colnames(dpred) <- c("E","HOMOLUMOgap")
+predinit <- (t(qsprpred_env$qspr_predict("c1ccccc1O")[[1]]))
+colnames(predinit) <- c("E","HOMOLUMOgap")
+ggplot(data = dt, aes(x = E, y = HOMOLUMOgap)) + geom_point(size=0.4, color="black") + 
+  annotate("rect", xmin=targ.min[1], xmax=targ.max[1], ymin=targ.min[2], ymax=targ.max[2], alpha=0.2, color="blue", fill="blue") +
+  geom_point(data = dpred, aes(x = E, y = HOMOLUMOgap), size=0.4, color="red") +
+  geom_point(data = data.frame(predinit), aes(x = E, y = HOMOLUMOgap), size=4, color="green", shape=3) +
+  labs(x="E", y="HOMO-LUMO gap", title="Initial dataset") + ylim(c(0,max(prop[,2]))) + xlim(c(0,max(prop[,1]))) + 
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Initially departed from the phenol properties (green cross), generated SMILES (red dots) with a high score has reached the targeted properties space (blue area). The density of population in the targeted space could be enhanced following more SMC processes, and the diversity of the generated SMILES can be improved by growing the list of SMILES used for the chemical language model building. These are both important and general aspects in the generation of novel organic molecular compounds with targeted properties. Also, one could modify the couple (features,regression models), as the hyper-parameters relatives to the SMC process, in a quest to improve the speed and accuracy of the generation process for a given initial dataset. 
+
+Let's finish by a view over the top 10 of the SMILES candidates:
+```{r, fig.width=8, fig.height=16, fig.align='center'}
+viewstr(gensmis[1:10,1], nrow = 5, ncol = 2, legend = paste("ID:",c(1:10)))
+```
+
+Note that in the *legend*, any vector of length equivalent to the vector of SMILES (*gensmis* here) can be paste to deliver more sophisticated informations (e.g. score, properties, etc.). 
+
+# (Optional)
+
+## Unbalanced datasets
+
+Let's complicate the initial dataset a little bit. The provided dataset in *qspr.data* is balanced. All the SMILES in the *smis* vector possess simultaneously the two properties (HOMO-LUMO gap and internal energy). In reality, datasets are very often unbalanced. For example, a dataset of melting points can exist in some repository, and another dataset containing dipole moments in another one, each having a different list of related SMILES that do not, or weakly, match. In this case, it is preferable to present in input a *list* of vectors of SMILES with a *list* of vectors/matrices with related properties. The **iqsr** package can handle it. 
+
+Let's just cut the dataset into two parts:
+```{r}
+cut_l <- 0.9*length(smis)
+cut <- c(1:cut_l)
+smis1 <- smis[cut]
+smis2 <- smis[-cut]
+prop1 <- prop[cut,"E"]
+prop2 <- prop[-cut,"HOMO-LUMO gap"]
+```
+
+There are now two distinct datasets of different length, presenting two sets of different SMILES and properties. 
+
+Finally, the prediction environment can be set up. Here, two different training sets are created: 
+```{r}
+smis1_l <- length(smis1)
+smis2_l <- length(smis2)
+trainidx1 <- sample(1:smis1_l, 0.9*smis1_l)
+trainidx2 <- sample(1:smis2_l, 0.9*smis2_l)
+qsprpred_env <- QSPRpred()
+qsprpred_env$init_env(smis=list(smis1[trainidx1],smis2[trainidx2]), prop=list(prop1[trainidx1],prop2[trainidx2]), v_fnames=c("standard","extended","circular"))
+```
+
+It can be noted that the same set of descriptors types ("standard","extended" and "circular") has been chosen here to resolve the two datasets. This is not compulsory, and the prediction environment could have been initialized via:
+```{r, eval=FALSE, include=FALSE}
+v_fnames=list(c("standard","extended"),c("graph"))
+```
+
+Here, the binary "standard" and "extended" fingerprints would be have been used as features for the prediction model dedicated to the first dataset (*smis1*,*prop1*), and the "graph" fingerprint to the second dataset (*smis2*,*prop2*) only.  
+
+The training of the regression models is unchanged: (this may take few mins)
+```{r, eval=TRUE, include=TRUE}
+qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
+```
+
+Now, the prediction step: 
+```{r}
+predictions1 <- qsprpred_env$qspr_predict(smis1[-trainidx1])
+predictions2 <- qsprpred_env$qspr_predict(smis2[-trainidx2])
+```
+
+How do they look like: 
+```{r}
+# Example for 4 compounds
+cat("Predictions:\n")
+rownames(predictions1[[1]]) <- c("E","HOMO-LUMO gap")
+predictions1[[1]][,1:4] # predictions
+cat("\nVariances:\n")
+rownames(predictions1[[2]]) <- c("E","HOMO-LUMO gap")
+predictions1[[2]][,1:4] # variances
+```
+
+And, let's have a look to how well the regression models have performed:
+```{r fig.width=8, fig.height=4, fig.align='center'}
+d1 <- data.frame(predictions1[[1]][1,],prop1[-trainidx1],sqrt(predictions1[[2]][1,]))
+colnames(d1) <- c("pred","prop","sd")
+d2 <- data.frame(predictions2[[1]][2,],prop2[-trainidx2],sqrt(predictions2[[2]][2,]))
+colnames(d2) <- c("pred","prop","sd")
+
+prd.obs.rmse1 <- round(sqrt(sum((predictions1[[1]][1,] - prop1[-trainidx1])^2) / (0.1*smis1_l)),digits = 1)
+prd.obs.corr1 <- round(cor(predictions1[[1]][1,],prop1[-trainidx1]),digits = 2)
+prd.obs.rmse2 <- round(sqrt(sum((predictions2[[1]][2,] - prop2[-trainidx2])^2) / (0.1*smis2_l)),digits = 1)
+prd.obs.corr2 <- round(cor(predictions2[[1]][2,],prop2[-trainidx2]),digits = 2)
+
+minmaxx <- c(min(d1[,1]),max(d1[,1]))
+minmaxy <- c(min(d1[,2]),max(d1[,2]))
+p1 <- ggplot(data = d1, aes(x = pred, y = prop, size=sd)) + geom_point(color="cyan3") + geom_point(shape=1, alpha=0.4) +
+  labs(x="predictions", y="observations", title="E") + ylim(minmaxy) + xlim(minmaxx) + 
+  guides(size=guide_legend(title="s.d.")) + 
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1, alpha = 0.5) +
+  annotate("text", x = c(50,50), y = c(500,530), label = c(paste("RMSE:",prd.obs.rmse1), paste("COR:",prd.obs.corr1)) , color="black", size=3, angle=0, fontface="bold") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+minmaxx <- c(min(d2[,1]),max(d2[,1]))
+minmaxy <- c(min(d2[,2]),max(d2[,2]))
+p2 <- ggplot(data = d2, aes(x = pred, y = prop, size = sd)) + geom_point(color="deepskyblue") + geom_point(shape=1, alpha=0.4) +
+  labs(x="predictions", y="observations", title="HOMO-LUMO gap") + ylim(minmaxy) + xlim(minmaxx) + 
+  guides(size=guide_legend(title="s.d.")) + 
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1, alpha = 0.5) +
+  annotate("text", x = c(5,5), y = c(12,13), label = c(paste("RMSE:",prd.obs.rmse2), paste("COR:",prd.obs.corr2)) , color="black", size=3, angle=0, fontface="bold") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(p1,p2,ncol=2)
+```
+
+And that's it. The following procedures for generation of novel compounds are unchanged. 
+
+## Bayesian optimization and hyper-parameters choice
+
+It is often problematic to find a set of hyper-parameters that will suit properly a given regression model to improve its predictions capability. To this end, one of the numerous solution to this problem is to use Bayesian optimization to dig inside a huge hyper-parameters space efficiently. 
+
+Let's take back the previous dataset and improve the ranger model used for the HOMO-LUMO gap predictions with this code snippet:
+```{r, eval=FALSE, include=TRUE}
+library(ranger)
+library(rBayesianOptimization)
+df <- data.frame(properties[[2]],features[[2]]) # 6906 SMILES, 1 property, 3073 features
+colnames(df) <- c("property",colnames(df[,-1]))
+id <- sample(dim(df)[1],6000)
+df.train <- df[id,]
+df.test <- df[-id,]
+
+folds <- cut(seq(1,6000), breaks = 6, labels = FALSE) # 6-folds cross-validation
+
+rf_cvfold <- function(mtry, ntree){ # Optimization function to be maximized for Bayesian optimization
+  mae <- c()
+  for(i in 1:6){
+    id <- which(folds == i)
+    valid <- df.train[id,]
+    train <- df.train[-id,]
+    rgr <- ranger(property~., data = train, mtry = mtry, num.trees = ntree)
+    prd <- predict(rgr, data = valid)
+    mae[i] <- mean(abs(valid$property - prd$predictions))
+  }
+  list(Score = -mean(mae), Pred = -mean(mae)) # return a negative mean absolute error (mae)
+}
+
+opt_rf <- BayesianOptimization(rf_cvfold, bounds = list("mtry" = c(10L,1000L), "ntree" = c(100L,500L)), init_points = 10, n_iter = 2)
+```
+
+This kind of optimization of the hyper-parameters can be time consuming, but it worths to try it for a potential improvement of the forward model. 
+
+```{r, eval=FALSE, include=TRUE}
+qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = opt_rf$Best_Par[2], "mtry" = opt_rf$Best_Par[1])),n_boot=100,s_boot = 0.85,r_boot = F,parallelize=T)
+
+predictions2 <- qsprpred_env$qspr_predict(smis2[-trainidx2])
+
+d2 <- data.frame(predictions2[[1]][2,],prop2[-trainidx2],sqrt(predictions2[[2]][2,]))
+colnames(d2) <- c("pred","prop","sd")
+
+prd.obs.rmse2 <- round(sqrt(sum((predictions2[[1]][2,] - prop2[-trainidx2])^2) / (0.1*smis2_l)),digits = 1)
+prd.obs.corr2 <- round(cor(predictions2[[1]][2,],prop2[-trainidx2]),digits = 2)
+
+minmaxx <- c(min(d2[,1]),max(d2[,1]))
+minmaxy <- c(min(d2[,2]),max(d2[,2]))
+ggplot(data = d2, aes(x = pred, y = prop, size = sd)) + geom_point(color="deepskyblue") + geom_point(shape=1, alpha=0.4) +
+  labs(x="predictions", y="observations", title="HOMO-LUMO gap") + ylim(minmaxy) + xlim(minmaxx) + 
+  guides(size=guide_legend(title="s.d.")) + 
+  geom_abline(intercept = 0, slope = 1, color = "red", size = 1, alpha = 0.5) +
+  annotate("text", x = c(5,5), y = c(12,13), label = c(paste("RMSE:",prd.obs.rmse2), paste("COR:",prd.obs.corr2)) , color="black", size=3, angle=0, fontface="bold") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Deep learning set up
+
+The incorporation of the *mx.model.FeedForward.create* from the **mxnet** package in **iqspr** allows the user to build any custom symbolic configuration of a neural network, and use it as a forward model. 
+
+* mxnet package should be initially installed from [here](http://mxnet.io/get_started/setup.html) according to your system (Windows/MACOSX/Linux). 
+
+Let's build a fully connected neural network with three hidden layers, and "tanh" as activation function for all the hidden nodes: 
+```{r, fig.align='center', fig.height=8, fig.width=4, include=TRUE}
+data <- mx.symbol.Variable("data")
+fc1 <- mx.symbol.FullyConnected(data, name = "FullyConnected 1", num.hidden = 128)
+act1 <- mx.symbol.Activation(fc1, name = "Activation 1 tanh", act.type = 'tanh')
+fc2 <- mx.symbol.FullyConnected(act1, name = "FullyConnected 2", num.hidden = 64)
+act2 <- mx.symbol.Activation(fc2, name = "Activation 2 tanh", act.type = 'tanh')
+fc3 <- mx.symbol.FullyConnected(act2, name = "FullyConnected 3", num.hidden = 1)
+lro <- mx.symbol.LinearRegressionOutput(fc3, name = "Linear Regression Output")
+graph.viz(lro, graph.title = "Custom graph", graph.width.px = 240, graph.height.px = 640, graph.title.font.name = "arial")
+```
+
+Then, the symbolic configuration *lro* of the neural network is impulsed in the forward model like this:
+```{r, eval=FALSE, include=TRUE}
+nn_params <- list("symbol" = lro,
+                  "ctx" = mx.cpu(), # mx.gpu() recommanded
+                  "num.round" = 5,
+                  "array.batch.size" = 20,
+                  "learning.rate" = 2e-6,
+                  "momentum" = 0.9,
+                  "eval.metric" = mx.metric.rmse,
+                  "array.layout" = "rowmajor")
+qsprpred_env$model_training(model=c("linear_Bayes","deeplearning"),params=list(list(NA),nn_params),n_boot=1,s_boot = 0.85,r_boot = F,parallelize=T)
+```
+
+Finally, subsequent steps like predictions and/or generation of novel SMILES are unchanged. 
+
+By default, the symbolic configuration *lro* of the neural network follows a more basic scheme such as: 
+```{r, eval=FALSE, include=TRUE}
+data <- mx.symbol.Variable("data")
+fc1 <- mx.symbol.FullyConnected(data, name = "FullyConnected 1", num.hidden = 1)
+lro <- mx.symbol.LinearRegressionOutput(fc1, name = "Linear Regression Output")
+graph.viz(lro, graph.title = "Custom graph", graph.width.px = 240, graph.height.px = 640, graph.title.font.name = "arial")
+```
+
+It is up to the user to build much more sophisticated neural networks that will be judged to fit a given purpose. To this effect, one can follow this [tutorial](http://dmlc.ml/rstats/2015/11/03/training-deep-net-with-R.html) as a starting step for configuring neural networks with **mxnet**. 
+
+## Empirical calculation
+
+Let's define a property *P* as a function of two distinct properties *A* and *B*. Little amount of data, or no dataset, is available to train a regression model. However, datasets exist for *A* and *B*, and *P* is empirically calculable from them. In this case, **iqspr** can handle the training of respective models based on properties *A* and *B*, and then empirically calculate consequent predictions and variance on the predictions as follows. 
+
+First of all, let's define the empirical function that will contain the equation $P = f(A,B)$ and $Var(P) = f(Var(A), Var(B))$. Taking the simple case where $P = A+B$, the function is written as:
+```{r}
+pfunc <- function(EVarlist = list()){
+  predy <- EVarlist[[1]]   # matrix with predictions for A and B
+  predvar <- Evarlist[[2]] # matrix with variances over the predictions for A and B
+  EA <- predy[1,]          # expected (predicted) values for A
+  EB <- predy[2,]          # expected (predicted) values for B
+  VarA <- predvar[1,]      # variances for A
+  VarB <- predvar[2,]      # variances for B
+  EP <- EA+EB              # calculated expected values for P
+  VarP <- VarA + VarB      # calculated variances for P, if A and B are uncorrelated
+  
+  return(list(EP,VarP))    # return a list of two vectors of expected values and variances for P
+}
+```
+
+Internally to the *QSPRpred* class and *qspr_predict* method in particular, a list which contains the predictions and the variances matrices is passed to *pfunc*. These two matrices have *nrows* equals to the number of SMILES for which the properties *A* and *B* are predicted, and *ncols* equals to the total number of properties involved in the empirical computation (2 here). The returned list of predicted values and variances for P are then added via *rbind* to the related, and already existing, predictions and variances matrices. This way, the co-evolution of *A*, *B* and *P* can be accessed by the user. This is particularly interesting for defining an *a priori* unknown (*A*,*B*) couple that produces targeted *P*.
+
+Then, let's pass the function above, *pfunc*, to the prediction environment:
+```{r, eval=FALSE, include=TRUE}
+qsprpred_env$init_env(smis=list(smis1[trainidx1],smis2[trainidx2]), prop=list(prop1[trainidx1],prop2[trainidx2]), v_fnames=c("standard"), v_func = pfunc, v_func_args = c(1,2))
+```
+
+Note the *v_func_args* which tags the properties to be passed to *pfunc*. Indeed, 3 properties *A*, *B* and *C* could be submitted to *qsprpred_env*, but if *A* and *C* are only involved in the calculation returned by *pfunc*, *v_func_args* would become:
+```{r}
+v_func_args = c(1,3)
+```
+The length of *v_func_args* and its content must be in agreement with the *pfunc* requirements, and the placement of the properties in the submitted *prop*.
+
+Finally, out of subsequent steps like predictions and/or generation of novel SMILES that are unchanged, the manner that a targeted properties space is defined is sligthly different:
+```{r, eval=FALSE, include=TRUE}
+targ.min <- c(NA,NA,100)
+targ.max <- c(NA,NA,150)
+qsprpred_env$set_target(targ.min,targ.max)
+```
+
+In this example above, only the empirically calculated property *P* will be used in the generation of novel SMILES with properties $P \in [100;150]$. The constraints on *A* and *B* are not assigned (e.g. *NA*).
