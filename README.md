@@ -12,9 +12,9 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 
 # Let's get started
 
-* Install R >= 3.3.3 for your system from [here](https://www.r-project.org/)
+* Install R >= 3.3.3 from [here](https://www.r-project.org/)
 
-* Install RStudio for your system from [here](https://www.rstudio.com/products/rstudio/download/#download)
+* Install RStudio from [here](https://www.rstudio.com/products/rstudio/download/#download)
 
 * Install JAVA JDK >= 1.7 from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 
