@@ -802,16 +802,10 @@ QSPRpred <- setRefClass("QSPRpred",
                 reach a targeted properties space"
                 forward_pred <- qspr_predict(smis)
                 predy <- forward_pred[[1]]
-                # if(dim(temp)[2]==1){
-                #   predvar <- as.numeric(temp)^2*forward_pred[[2]]
-                # } else {
-                #   predvar <- temp^2*forward_pred[[2]]
-                # }
                 if(length(temp)==1){
                   predvar <- (temp^2)*forward_pred[[2]]
                 } else {
                   predvar <- diag(temp)^2 %*% forward_pred[[2]]
-                  #predvar <- temp^2*forward_pred[[2]]
                 }
                 rm(forward_pred)
 
@@ -828,16 +822,12 @@ QSPRpred <- setRefClass("QSPRpred",
                 }
 
                 if(length(filtermin)!=0&&length(filtermax)!=0){
-                  # mols <- parse.smiles(smis, kekulise = F)
-                  # hidout <- lapply(mols,do.aromaticity)
-                  # hidout <- lapply(mols,do.isotopes)
-                  # hidout <- lapply(mols,do.typing)
-                  # mw <- as.numeric(lapply(mols,get.exact.mass))
                   filterval <- filterfunc(smis)
                   filter_veto <- t(t(filterval)>filtermin&t(filterval)<filtermax)
                   for(i in 1:dim(filter_veto)[2]){
                     res <- res * as.numeric(filter_veto[,i])
                   }
+                  if(sum(res)==0)res <- rep(1, length(smis))
                 }
 
                 return(list(res,predy,predvar))

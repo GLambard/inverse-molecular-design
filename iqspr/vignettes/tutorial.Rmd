@@ -121,8 +121,7 @@ Same comment than for the *features* except that the *properties* list contains 
 
 Now, let's train the regression models: (this may take from few mins to hours depending on your dataset and system capabilities)
 ```{r, eval=TRUE, include=TRUE}
-#qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = #0.85,r_boot = F,parallelize=T)
-qsprpred_env$model_training(model=c("linear_Bayes"),params=NA)
+qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
 ```
 
 1. Two different models, "linear_Bayes" and "ranger", have been chosen as regression models which will predict respectively the internal energy *E* and the *HOMO-LUMO gap*. Note that the names for the regression models are represented by their nicknames in *model*. These nicknames are an internal representation of the different implemented regression models in this package. Their list, with their usual names from literature, related packages as the functions implicitly called for the models training, can be found via:
@@ -212,6 +211,7 @@ The predictions versus observations plots reveal correlations (COR) and root mea
 
 Now that the forward model is ready, let's define a properties space for which new compounds are desired. The method *set_target()* is used to this effect:
 ```{r}
+qsprpred_env$model_training(model=c("linear_Bayes"),params=NA) # linear_Bayes prevails here for quick execution
 targ.min <- c(50,2)
 targ.max <- c(250,4)
 qsprpred_env$set_target(targ.min,targ.max)
@@ -235,38 +235,42 @@ Let's now initialize the SMC (sequential Monte-Carlo) environment, generate new 
 1. The SMC environment can be initialized as follows:
 ```{r}
 data("engram_5k")
-smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,300))
+smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,3))
 ```
 
-100 SMILES of equivalent structures (e.g. a phenol here) are submitted to initialize 100 SMC processes that will sequentially produce new SMILES. As the subsequent SMILES modifications or evolutions depend on their capabilities to reach a targeted properties space, their properties are adressed by the trained forward model in *qsprpred_env*. The *engram_5k* is submitted to serve as the prior for the SMILES generator. Finally, a temperature is set as a numerical vector *v_temp* for both properties. This temperature decreases along the annealing process in a SMC until it reaches 1. This decrease follows a decay rate fixed at 0.95 by default in *SmcChem$new*, but it can be tuned via *v_decay* (see the *SmcChem* class documentation for further details and options).  
+25 SMILES of equivalent structures (e.g. a phenol here) are submitted to initialize 25 SMC processes that will sequentially produce new SMILES. As the subsequent SMILES modifications or evolutions depend on their capabilities to reach a targeted properties space, their properties are adressed by the trained forward model in *qsprpred_env*. The *engram_5k* is submitted to serve as the prior for the SMILES generator. Finally, a temperature is set as a numerical vector *v_temp* for both properties. This temperature decreases along the annealing process in a SMC until it reaches 1. This decrease follows a decay rate fixed at 0.95 by default in *SmcChem$new*, but it can be tuned via *v_decay* (see the *SmcChem* class documentation for further details and options).  
 
 2. Let's start to run the SMC process: (this may take from few mins to hours depending on the number of loops)
 ```{r, results='hide'}
-for(i in 1:200){
-  smchem$smcexec(niter = 2, nsteps = 7, preorder = 0.2)
+for(i in 1:50){
+  smchem$smcexec(niter = 1, nsteps = 5, preorder = 0.2)
 }
 ```
 
 Basically, at each SMC iteration *i*
-+ A re-ordering *preorder* of the SMILES is performed randomly over *0.2**100 % of them thanks to OpenBabel.   
-+ m rightmost letters are deleted, with $m \sim B(m|L,\eta)$ a binomial probability (L = *nsteps = 5*, $\eta=0.5$).
-+ sequentially extend the reduced string by adding a new letter at the terminal point $L-m$ times. A newly added letter follows the prior (trained language model).
-+ Once the termination code "$" appears, the elongation is stopped and a new SMILES is created. 
+* A re-ordering *preorder* of the SMILES is performed randomly over $0.2*100$ % of them thanks to OpenBabel.   
+* m rightmost letters are deleted, with $m \sim B(m|L,\eta)$ a binomial probability (L = *nsteps = 5*, $\eta=0.5$).
+* sequentially extend the reduced string by adding a new letter at the terminal point $L-m$ times. A newly added letter follows the prior (trained language model).
+* Once the termination code "$" appears, the elongation is stopped and a new SMILES is created. 
 
 This is performed over the 100 identical SMILES submitted earlier. 
 
 Note that the structure of the chosen SMILES in the initial step has no importance. They can be un-identical and sampled from an existing dataset. Also, higher the number of initial SMILES (100 here) is, higher the plurality of output SMILES will be. In particular when the initial SMILES are chosen as identical, a high number ($\geq 100$) reduces redundancies and increases the number of output SMILES with weak amount of similarities. 
 
 Let's have a look to the output SMILES string presenting the highest score, i.e. having the highest probability to have reached the targeted properties space:
-```{r, fig.width=4, fig.height=4, fig.align='center'}
+```{r, results='hide'}
 gensmis <- smchem$get_hiscores(nsmi=200, exsim=0.9)
+```
+
+```{r}
 head(gensmis)
 ```
+
 
 *nsmi=200* generated SMILES and their relative scores are here listed. The tanimoto similarity index of *exsim=0.9* is requested as an upper limit among these SMILES. 
 
 But, what about their properties:
-```{r}
+```{r, fig.width=4, fig.height=4, fig.align='center'}
 pred <- qsprpred_env$qspr_predict(gensmis[,1])
 predmat <- t(pred[[1]]) 
 
@@ -299,7 +303,7 @@ Note that in the *legend*, any vector of length equivalent to the vector of SMIL
 Let's complicate the initial dataset a little bit. The provided dataset in *qspr.data* is balanced. All the SMILES in the *smis* vector possess simultaneously the two properties (HOMO-LUMO gap and internal energy). In reality, datasets are very often unbalanced. For example, a dataset of melting points can exist in some repository, and another dataset containing dipole moments in another one, each having a different list of related SMILES that do not, or weakly, match. In this case, it is preferable to present in input a *list* of vectors of SMILES with a *list* of vectors/matrices with related properties. The **iqsr** package can handle it. 
 
 Let's just cut the dataset into two parts:
-```{r}
+```{r, eval=FALSE, include=TRUE}
 cut_l <- 0.9*length(smis)
 cut <- c(1:cut_l)
 smis1 <- smis[cut]
@@ -311,7 +315,7 @@ prop2 <- prop[-cut,"HOMO-LUMO gap"]
 There are now two distinct datasets of different length, presenting two sets of different SMILES and properties. 
 
 Finally, the prediction environment can be set up. Here, two different training sets are created: 
-```{r}
+```{r, eval=FALSE, include=TRUE}
 smis1_l <- length(smis1)
 smis2_l <- length(smis2)
 trainidx1 <- sample(1:smis1_l, 0.9*smis1_l)
@@ -321,25 +325,25 @@ qsprpred_env$init_env(smis=list(smis1[trainidx1],smis2[trainidx2]), prop=list(pr
 ```
 
 It can be noted that the same set of descriptors types ("standard","extended" and "circular") has been chosen here to resolve the two datasets. This is not compulsory, and the prediction environment could have been initialized via:
-```{r, eval=FALSE, include=FALSE}
+```{r, eval=FALSE, include=TRUE}
 v_fnames=list(c("standard","extended"),c("graph"))
 ```
 
 Here, the binary "standard" and "extended" fingerprints would be have been used as features for the prediction model dedicated to the first dataset (*smis1*,*prop1*), and the "graph" fingerprint to the second dataset (*smis2*,*prop2*) only.  
 
 The training of the regression models is unchanged: (this may take few mins)
-```{r, eval=TRUE, include=TRUE}
+```{r, eval=FALSE, include=TRUE}
 qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
 ```
 
 Now, the prediction step: 
-```{r}
+```{r, eval=FALSE, include=TRUE}
 predictions1 <- qsprpred_env$qspr_predict(smis1[-trainidx1])
 predictions2 <- qsprpred_env$qspr_predict(smis2[-trainidx2])
 ```
 
 How do they look like: 
-```{r}
+```{r, eval=FALSE, include=TRUE}
 # Example for 4 compounds
 cat("Predictions:\n")
 rownames(predictions1[[1]]) <- c("E","HOMO-LUMO gap")
@@ -350,7 +354,7 @@ predictions1[[2]][,1:4] # variances
 ```
 
 And, let's have a look to how well the regression models have performed:
-```{r fig.width=8, fig.height=4, fig.align='center'}
+```{r fig.width=8, fig.height=4, fig.align='center', eval=FALSE, include=TRUE}
 d1 <- data.frame(predictions1[[1]][1,],prop1[-trainidx1],sqrt(predictions1[[2]][1,]))
 colnames(d1) <- c("pred","prop","sd")
 d2 <- data.frame(predictions2[[1]][2,],prop2[-trainidx2],sqrt(predictions2[[2]][2,]))
@@ -446,7 +450,8 @@ The incorporation of the *mx.model.FeedForward.create* from the **mxnet** packag
 * mxnet package should be initially installed from [here](http://mxnet.io/get_started/setup.html) according to your system (Windows/MACOSX/Linux). 
 
 Let's build a fully connected neural network with three hidden layers, and "tanh" as activation function for all the hidden nodes: 
-```{r, fig.align='center', fig.height=8, fig.width=4, include=TRUE}
+```{r, fig.align='center', fig.height=8, fig.width=4, eval= FALSE, include=TRUE}
+library(mxnet)
 data <- mx.symbol.Variable("data")
 fc1 <- mx.symbol.FullyConnected(data, name = "FullyConnected 1", num.hidden = 128)
 act1 <- mx.symbol.Activation(fc1, name = "Activation 1 tanh", act.type = 'tanh')
@@ -487,7 +492,7 @@ It is up to the user to build much more sophisticated neural networks that will 
 Let's define a property *P* as a function of two distinct properties *A* and *B*. Little amount of data, or no dataset, is available to train a regression model. However, datasets exist for *A* and *B*, and *P* is empirically calculable from them. In this case, **iqspr** can handle the training of respective models based on properties *A* and *B*, and then empirically calculate consequent predictions and variance on the predictions as follows. 
 
 First of all, let's define the empirical function that will contain the equation $P = f(A,B)$ and $Var(P) = f(Var(A), Var(B))$. Taking the simple case where $P = A+B$, the function is written as:
-```{r}
+```{r, eval=FALSE, include=TRUE}
 pfunc <- function(EVarlist = list()){
   predy <- EVarlist[[1]]   # matrix with predictions for A and B
   predvar <- Evarlist[[2]] # matrix with variances over the predictions for A and B
@@ -523,3 +528,30 @@ qsprpred_env$set_target(targ.min,targ.max)
 ```
 
 In this example above, only the empirically calculated property *P* will be used in the generation of novel SMILES with properties $P \in [100;150]$. The constraints on *A* and *B* are not assigned (e.g. *NA*).
+
+## Filtering
+
+After the generation of novel compounds, there is sometimes the necessity to filter them out according to properties which are directly computable, and for which a dedicated predictive model would be a waste of time and/or accuracy. Indeed, some constraints on the molecular weight of given compounds, for example, can be required by the user. But, in this case, a lot of novel compounds would have been generated in vain, being of no interests for the given aim. Therefore, a specific filtering function can be implemented in iqspr for filtering novel compounds out on the fly. 
+
+First of all, let's define a specific function that will filter the molecular weight of generated compounds from their SMILES:
+```{r, eval=FALSE, include=TRUE}
+mw_filter <- function(smiles){
+  mols <- parse.smiles(smiles, kekulise = F)
+  hidout <- lapply(mols,do.aromaticity)
+  hidout <- lapply(mols,do.isotopes)
+  hidout <- lapply(mols,do.typing)
+  mw <- as.numeric(lapply(mols,get.exact.mass))
+  return(mw)
+}
+```
+
+The molecular weight is here computed following the documentation in [rcdk](https://cran.r-project.org/web/packages/rcdk/rcdk.pdf). 
+
+Then, *mw_filter* function is simply passed to the *qsprpred_env* via:
+```{r, eval=FALSE, include=TRUE}
+qsprpred_env <- QSPRpred()
+qsprpred_env$init_env(smis=smis[trainidx], prop=prop[trainidx,], v_fnames=c("standard"), 
+                      v_filterfunc = mw_filter, v_filtermin = c(100), v_filtermax = c(200))
+```
+
+That's it! Then, the regression model training and the compounds generation procedures stay unchanged. Novel compounds with a molecular weight $MW \in [100;200]\,g.mol^{-1}$ will have a higher likelihood to be generated towards a target properties space.

@@ -370,12 +370,12 @@ SmcChem <- setRefClass("SmcChem",
         mol <- parse.smiles(tsmi[i], kekulise = T)[[1]] # if kekulise = F, aromatic rings are missed!
         if(rcdk_version > 338){
           dep <- get.depictor(width=500, height=500, zoom=3)
-          temp <- view.image.2d(molecule=mol,depictor=dep)
+          im_temp <- view.image.2d(molecule=mol,depictor=dep)
         } else {
-          temp <- view.image.2d(molecule=mol,width=500, height=500)
+          im_temp <- view.image.2d(molecule=mol,width=500, height=500)
         }
         plot(NA,NA,xlim=c(1,10),ylim=c(1,10),xaxt='n',yaxt='n',xlab='',ylab='')
-        rasterImage(temp,1,1,10,10)
+        rasterImage(im_temp,1,1,10,10)
         legend("topleft", legend[i], bty = "n", cex = 1.3)
       }
     }
