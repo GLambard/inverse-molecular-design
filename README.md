@@ -1,4 +1,4 @@
-# inverse molecular design: iqspr v2.3
+# inverse molecular design for R: iqspr v2.3
 It is devoted to the autonomous generation of novel organic compounds with target physicochemical properties initially constrained by the user. This package has the ambition to become an unavoidable tool in the innovation of novel materials and/or drugs with specific target properties. 
 
 # Introduction
@@ -11,6 +11,10 @@ compounds are then checked by direct experiments and/or driven by a QSPR analysi
 __This package is entirely devoted to__ the inverse problem which is the backward prediction. __The generation of entirely novel SMILES in output, and consequently chemical compounds, from input targeted properties initially constrained by a user__. Thanks to the inverse-QSPR model([via](https://link.springer.com/article/10.1007%2Fs10822-016-0008-z)), this is now possible. This package has the ambition to become a useful tool, in the innovation of novel materials, in a field that is now widely referred as Materials Informatics. It is important to note that as SMILES is the basis format for this package, only organic molecular non-crystalline compounds can be generated. 
 
 # Let's get started
+
+* Install R >= 3.3.3 for your system from [here](https://www.r-project.org/)
+
+* Install RStudio for your system from [here](https://www.rstudio.com/products/rstudio/download/#download)
 
 * Install JAVA JDK >= 1.7 from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 
