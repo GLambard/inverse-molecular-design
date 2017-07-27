@@ -10,6 +10,12 @@
 
 \item{prop}{is a list of vectors/matrices of available targeted physico-chemical properties for the training dataset.}
 
+\item{v_filterfunc}{defines the filtering function (NULL by default) to use in the computation of properties to filter.}
+
+\item{v_filtermin}{is a vector representing the expected minimal value for each filtered property.}
+
+\item{v_filtermax}{is a vector representing the expected maximal value for each filtered property.}
+
 \item{v_fnames}{is a vector, or a list of vectors, of fingerprints and/or physical descriptors types used as features for each regression model
 (see \code{\link{get_descriptor}} for an exhaustive list of available descriptors).}
 
@@ -46,9 +52,9 @@ capability is implemented.}
 \item{parallelize}{allows (FALSE by default) to use the full computational capability of a user's machine for a bootstrap analysis.
 Indeed, N-1 cores, with N the total number of cores available on the machine, will be used.}
 
-\item{v_propmin}{is a vector representing the expected minimal value for each targeted property}
+\item{v_propmin}{is a vector representing the expected minimal value for each targeted property.}
 
-\item{v_propmax}{is a vector representing the expected maximal value for each targeted property}
+\item{v_propmax}{is a vector representing the expected maximal value for each targeted property.}
 
 \item{temp}{is a vector/matrix of numerical values which sets the initial temperatures in the annealing process for the
 sequential Monte-Carlo sampler (see \code{vignette("tutorial", package = "iqspr")} for details).}
@@ -61,11 +67,17 @@ capabilities over a matrix or vector of studied properties.
 \section{Fields}{
 
 \describe{
-\item{\code{propndim}}{is the number of properties received as input data}
+\item{\code{propndim}}{is the number of properties received as input data.}
 
-\item{\code{propmin}}{is a vector representing the expected minimal value for each targeted property}
+\item{\code{propmin}}{is a vector representing the expected minimal value for each targeted property.}
 
-\item{\code{propmax}}{is a vector representing the expected maximal value for each targeted property}
+\item{\code{propmax}}{is a vector representing the expected maximal value for each targeted property.}
+
+\item{\code{filtermin}}{is a vector representing the expected minimal value for each filtered property.}
+
+\item{\code{filtermax}}{is a vector representing the expected maximal value for each filtered property.}
+
+\item{\code{filterfunc}}{is a function to compute the properties to filter.}
 
 \item{\code{X}}{is the nxd matrix, with d features for n input SMILES, returned by \code{\link{get_descriptor}}.}
 
@@ -98,7 +110,8 @@ capabilities over a matrix or vector of studied properties.
 
 \item{\code{get_props()}}{returns a list of nxp matrix Y of p properties for n input SMILES}
 
-\item{\code{init_env(smis = NULL, prop = matrix(0), v_fnames = NULL,
+\item{\code{init_env(smis = NULL, prop = matrix(0), v_filterfunc = NULL,
+  v_filtermin = NULL, v_filtermax = NULL, v_fnames = NULL,
   v_scale = FALSE, v_func = NULL, v_func_args = NULL, kekulise = F)}}{initialize the QSPR predictor: implicitly called via the QSPRpred$new() method}
 
 \item{\code{iqspr_predict(smis = NULL, temp = c(1, 1))}}{predicts properties for input SMILES from a given regression model and evaluates the probability to

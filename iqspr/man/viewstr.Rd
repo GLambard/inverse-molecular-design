@@ -4,7 +4,8 @@
 \alias{viewstr}
 \title{view 2D structures from SMILES string vector}
 \usage{
-viewstr(smis)
+viewstr(smis = NULL, width = 500, height = 500, nrow = 2, ncol = 2,
+  legend = "")
 }
 \arguments{
 \item{smis}{is a SMILES strings vector to submit.}

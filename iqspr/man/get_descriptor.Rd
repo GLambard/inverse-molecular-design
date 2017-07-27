@@ -37,7 +37,6 @@ the output descriptors.
 \examples{
 \dontrun{
 
-descriptors <- get_descriptor(smis = as.character(SMILES_list), desctypes = c("standard","pdesc"),
-                              scale = T, scale_init = T)}
+descriptors <- get_descriptor(smis = as.character(<SMILES_list>), desctypes = c("standard","topological"))}
 
 }

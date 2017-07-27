@@ -72,8 +72,9 @@ data(qsprpred_EG_5k)
 #same as run => qsprpred <- QSPRpred$new(smis=smis, y=as.matrix(y), v_fpnames="graph")
 
 #set target range
-qsprpred_EG_5k$ymin <- c(200, 1.5)
-qsprpred_EG_5k$ymax <- c(350, 2.5)
+targ.min <- c(200,1.5)
+targ.max <- c(350,2.5)
+qsprpred_EG_5k$set_target(targ.min,targ.max)
 
 #getting chemical strings from the Inverse-QSPR model
 smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred=qsprpred_EG_5k,
