@@ -14,13 +14,15 @@
 #' @param sddesc is a scalar (1 by default) or vector of standard deviations for a post-scaling of physical descriptors.
 #' @param quiet keeps the console's outputs quiet if sets to TRUE (FALSE by default).
 #'
-#' @examples
-#' \dontrun{
+#' @examples \dontrun{
 #'
-#' descriptors <- get_descriptor(smis = as.character(<SMILES_list>), desctypes = c("standard","topological"))}
+#' descriptors <- get_descriptor(smis = "C1=CC=C(C=C1)O", desctypes = c("standard","topological"))
+#'
+#' }
 #'
 #' @return the descriptor(s) with the associated means and standard deviations for scaling.
 #'
+#' @import fingerprint
 #' @import rcdk
 #' @import stats
 #'
@@ -49,7 +51,7 @@ get_descriptor <- function(smis = c("C1=CC=C(C=C1)O"),
   }
 
   if(!quiet)cat("Parsing of the SMILES strings in progress...\n")
-  mols <- parse.smiles(smis, kekulise=F) # kekulise on FALSE, the check should be done a priori
+  mols <- parse.smiles(as.character(smis), kekulise=F) # kekulise on FALSE, the check should be done a priori
   mols_op <- lapply(mols,do.aromaticity)
   mols_op <- lapply(mols,do.typing)
   mols_op <- lapply(mols,do.isotopes)

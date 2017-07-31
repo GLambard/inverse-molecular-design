@@ -4,8 +4,8 @@ author: "Guillaume Lambard"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Tutorial}
+  %\VignetteEngine{knitr::knitr}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -28,7 +28,7 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 
 OpenBabel is compulsory to the check of the validity for the generated SMILES and the re-ordering of these. 
 
-* __(Optional)__ Install mxnet version 0.9.4 or higher for the deep learning regression capabilities from [here](http://mxnet.io/get_started/setup.html).
+* __(Optional)__ Install mxnet version 0.9.4 or higher for the deep learning regression capabilities from [here](http://mxnet.io).
 
 # How does it work
 
@@ -97,7 +97,7 @@ One can have a look to the full list of available descriptors, via the command:
 get_descriptors()
 ```
 
-From "standard" to "circular", they are all binary fingerprints. "topological", "constitutional" and "electronic" are physical continuous descriptors (see [rcdk](https://cran.r-project.org/web/packages/rcdk/rcdk.pdf) for details). Keep in mind that the physical descriptors are much more time-consuming to be calculated than their binary counterparts by an order of magnitude or more. However, they could allow slightly better predictions depending on the dataset.
+From "standard" to "circular", they are all binary fingerprints. "topological", "constitutional" and "electronic" are physical continuous descriptors (see [rcdk](https://CRAN.R-project.org/package=rcdk) for details). Keep in mind that the physical descriptors are much more time-consuming to be calculated than their binary counterparts by an order of magnitude or more. However, they could allow slightly better predictions depending on the dataset.
  
 ## Regression models training
 
@@ -120,7 +120,7 @@ lapply(properties,dim)
 Same comment than for the *features* except that the *properties* list contains numerical vectors, or single-column matrices, containing one property per SMILES. 
 
 Now, let's train the regression models: (this may take from few mins to hours depending on your dataset and system capabilities)
-```{r, eval=TRUE, include=TRUE}
+```{r, eval=FALSE, include=TRUE}
 qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
 ```
 
@@ -129,14 +129,14 @@ qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA
 get_Models()
 ```
 
-Please note once more that for "deeplearning", the mxnet package should be initially installed from [here](http://mxnet.io/get_started/setup.html) according to your system (Windows/MACOSX/Linux). 
+Please note once more that for "deeplearning", the mxnet package should be initially installed from [here](http://mxnet.io) according to your system (Windows/MACOSX/Linux). 
 
-2. Two different sets of parameters, *params=list(list(NA),list("num.trees" = 200))*, have been respectively assigned to the two regression models. Then, one can easily change fixed paramaters for a given regression model in the extent of the model capabilities. For this last restriction, the user must refer to the packages documentation. However, one can access the default parameters given to the different regression models via:
+2. Two different sets of parameters, *params=list(list(NA),list("num.trees" = 200))*, have been respectively assigned to the two regression models. Then, one can easily change fixed paramaters for a given regression model in the extent of the model capabilities. For this last restriction, the user refers to the packages documentation. However, one can access the default parameters given to the different regression models via:
 ```{r}
 get_Model_params("elasticnet")
 ```
 
-Here, the "elasticnet" mixing parameter *alpha* is specified. All the other parameters are then fixed to the default values instantiated by the original glmnet package. Then, one can extend the list of fixed parameters. To come back to the case of "ranger" used earlier for the training, which is a fast implementation of Random Forest (see [here](https://cran.r-project.org/web/packages/ranger/ranger.pdf) for details), the requested fixed parameters can take the simple form of:
+Here, the "elasticnet" mixing parameter *alpha* is specified. All the other parameters are then fixed to the default values instantiated by the original glmnet package. Then, one can extend the list of fixed parameters. To come back to the case of "ranger" used earlier for the training, which is a fast implementation of Random Forest (see [here](https://CRAN.R-project.org/package=ranger) for details), the requested fixed parameters can take the simple form of:
 ```{r}
 get_Model_params("ranger")
 ```
@@ -155,8 +155,13 @@ in a file will vary with the number of bootstrap samples *n_boot*.
 ## Predictions
 
 Now that a bunch of regression models are trained, let's have a look to the prediction step: 
-```{r}
+```{r, eval=FALSE, include=TRUE}
 predictions <- qsprpred_env$qspr_predict(smis[testidx])
+```
+
+The predictions have been a priori stored in this package: 
+```{r}
+data("predictions")
 ```
 
 Similar to the *predict* function in the **stats** package, the *qspr_predict()* method predicts properties from SMILES using corresponding regression models (assigned earlier during the training). SMILES are transformed in their "standard", "extended" and "circular" fingerprints here, the features, then the properties are returned as a list of two matrices. One contains the predictions and the second the variances over these predictions deduced from bootstrap analysis outcomes. 
@@ -171,7 +176,7 @@ predictions[[2]][,1:4] # variances
 ```
 
 Let's have a look to how well the regression models have performed:
-```{r fig.width=8, fig.height=4, fig.align='center'}
+```{r, fig.width=8, fig.height=4, fig.align='center'}
 d1 <- data.frame(predictions[[1]][1,],prop[testidx,"E"],sqrt(predictions[[2]][1,]))
 colnames(d1) <- c("pred","prop","sd")
 d2 <- data.frame(predictions[[1]][2,],prop[testidx,"HOMO-LUMO gap"],sqrt(predictions[[2]][2,]))
@@ -210,7 +215,7 @@ The predictions versus observations plots reveal correlations (COR) and root mea
 ## Targeting a properties space
 
 Now that the forward model is ready, let's define a properties space for which new compounds are desired. The method *set_target()* is used to this effect:
-```{r}
+```{r, eval=FALSE, include=TRUE}
 qsprpred_env$model_training(model=c("linear_Bayes"),params=NA) # linear_Bayes prevails here for quick execution
 targ.min <- c(50,2)
 targ.max <- c(250,4)
@@ -233,7 +238,7 @@ Based a list of 5000 SMILES, rather small for the purpose of this tutorial, n-gr
 Let's now initialize the SMC (sequential Monte-Carlo) environment, generate new SMILES with targeted properties and visualize them.
 
 1. The SMC environment can be initialized as follows:
-```{r}
+```{r, eval=FALSE, include=TRUE}
 data("engram_5k")
 smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,3))
 ```
@@ -241,8 +246,8 @@ smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_
 25 SMILES of equivalent structures (e.g. a phenol here) are submitted to initialize 25 SMC processes that will sequentially produce new SMILES. As the subsequent SMILES modifications or evolutions depend on their capabilities to reach a targeted properties space, their properties are adressed by the trained forward model in *qsprpred_env*. The *engram_5k* is submitted to serve as the prior for the SMILES generator. Finally, a temperature is set as a numerical vector *v_temp* for both properties. This temperature decreases along the annealing process in a SMC until it reaches 1. This decrease follows a decay rate fixed at 0.95 by default in *SmcChem$new*, but it can be tuned via *v_decay* (see the *SmcChem* class documentation for further details and options).  
 
 2. Let's start to run the SMC process: (this may take from few mins to hours depending on the number of loops)
-```{r, results='hide'}
-for(i in 1:50){
+```{r, eval=FALSE, include=TRUE}
+for(i in 1:200){
   smchem$smcexec(niter = 1, nsteps = 5, preorder = 0.2)
 }
 ```
@@ -253,16 +258,18 @@ Basically, at each SMC iteration *i*
 * sequentially extend the reduced string by adding a new letter at the terminal point $L-m$ times. A newly added letter follows the prior (trained language model).
 * Once the termination code "$" appears, the elongation is stopped and a new SMILES is created. 
 
-This is performed over the 100 identical SMILES submitted earlier. 
+This is performed over the 25 identical SMILES submitted earlier. 
 
-Note that the structure of the chosen SMILES in the initial step has no importance. They can be un-identical and sampled from an existing dataset. Also, higher the number of initial SMILES (100 here) is, higher the plurality of output SMILES will be. In particular when the initial SMILES are chosen as identical, a high number ($\geq 100$) reduces redundancies and increases the number of output SMILES with weak amount of similarities. 
+Note that the structure of the chosen SMILES in the initial step has no importance. They can be un-identical and sampled from an existing dataset. Also, higher the number of initial SMILES (25 here) is, higher the plurality of output SMILES will be. In particular when the initial SMILES are chosen as identical, a high number ($\geq 100$) reduces redundancies and increases the number of output SMILES with weak amount of similarities. 
 
 Let's have a look to the output SMILES string presenting the highest score, i.e. having the highest probability to have reached the targeted properties space:
-```{r, results='hide'}
-gensmis <- smchem$get_hiscores(nsmi=200, exsim=0.9)
+```{r, eval=FALSE, include=TRUE}
+gensmis <- smchem$get_hiscores(nsmi=2000, exsim=0.9)
 ```
 
+The gensmis have been a priori stored in this package:
 ```{r}
+data("gensmis")
 head(gensmis)
 ```
 
@@ -270,7 +277,7 @@ head(gensmis)
 *nsmi=200* generated SMILES and their relative scores are here listed. The tanimoto similarity index of *exsim=0.9* is requested as an upper limit among these SMILES. 
 
 But, what about their properties:
-```{r, fig.width=4, fig.height=4, fig.align='center'}
+```{r, eval=FALSE, include=TRUE}
 pred <- qsprpred_env$qspr_predict(gensmis[,1])
 predmat <- t(pred[[1]]) 
 
@@ -278,6 +285,14 @@ dpred <- data.frame(predmat)
 colnames(dpred) <- c("E","HOMOLUMOgap")
 predinit <- (t(qsprpred_env$qspr_predict("c1ccccc1O")[[1]]))
 colnames(predinit) <- c("E","HOMOLUMOgap")
+```
+
+```{r, fig.width=4, fig.height=4, fig.align='center'}
+data("dpred")
+data("predinit")
+
+targ.min <- c(50,2)
+targ.max <- c(250,4)
 ggplot(data = dt, aes(x = E, y = HOMOLUMOgap)) + geom_point(size=0.4, color="black") + 
   annotate("rect", xmin=targ.min[1], xmax=targ.max[1], ymin=targ.min[2], ymax=targ.max[2], alpha=0.2, color="blue", fill="blue") +
   geom_point(data = dpred, aes(x = E, y = HOMOLUMOgap), size=0.4, color="red") +
@@ -286,6 +301,7 @@ ggplot(data = dt, aes(x = E, y = HOMOLUMOgap)) + geom_point(size=0.4, color="bla
   theme_bw() + 
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 
 Initially departed from the phenol properties (green cross), generated SMILES (red dots) with a high score has reached the targeted properties space (blue area). The density of population in the targeted space could be enhanced following more SMC processes, and the diversity of the generated SMILES can be improved by growing the list of SMILES used for the chemical language model building. These are both important and general aspects in the generation of novel organic molecular compounds with targeted properties. Also, one could modify the couple (features,regression models), as the hyper-parameters relatives to the SMC process, in a quest to improve the speed and accuracy of the generation process for a given initial dataset. 
 
@@ -447,7 +463,7 @@ ggplot(data = d2, aes(x = pred, y = prop, size = sd)) + geom_point(color="deepsk
 
 The incorporation of the *mx.model.FeedForward.create* from the **mxnet** package in **iqspr** allows the user to build any custom symbolic configuration of a neural network, and use it as a forward model. 
 
-* mxnet package should be initially installed from [here](http://mxnet.io/get_started/setup.html) according to your system (Windows/MACOSX/Linux). 
+* mxnet package should be initially installed from [here](http://mxnet.io) according to your system (Windows/MACOSX/Linux). 
 
 Let's build a fully connected neural network with three hidden layers, and "tanh" as activation function for all the hidden nodes: 
 ```{r, fig.align='center', fig.height=8, fig.width=4, eval= FALSE, include=TRUE}
@@ -518,7 +534,7 @@ Note the *v_func_args* which tags the properties to be passed to *pfunc*. Indeed
 ```{r}
 v_func_args = c(1,3)
 ```
-The length of *v_func_args* and its content must be in agreement with the *pfunc* requirements, and the placement of the properties in the submitted *prop*.
+The length of *v_func_args* and its content  be in agreement with the *pfunc* requirements, and the placement of the properties in the submitted *prop*.
 
 Finally, out of subsequent steps like predictions and/or generation of novel SMILES that are unchanged, the manner that a targeted properties space is defined is sligthly different:
 ```{r, eval=FALSE, include=TRUE}
@@ -545,7 +561,7 @@ mw_filter <- function(smiles){
 }
 ```
 
-The molecular weight is here computed following the documentation in [rcdk](https://cran.r-project.org/web/packages/rcdk/rcdk.pdf). 
+The molecular weight is here computed following the documentation in [rcdk](https://CRAN.R-project.org/package=rcdk). 
 
 Then, *mw_filter* function is simply passed to the *qsprpred_env* via:
 ```{r, eval=FALSE, include=TRUE}

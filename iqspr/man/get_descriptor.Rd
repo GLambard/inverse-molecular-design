@@ -37,6 +37,8 @@ the output descriptors.
 \examples{
 \dontrun{
 
-descriptors <- get_descriptor(smis = as.character(<SMILES_list>), desctypes = c("standard","topological"))}
+descriptors <- get_descriptor(smis = "C1=CC=C(C=C1)O", desctypes = c("standard","topological"))
+
+}
 
 }

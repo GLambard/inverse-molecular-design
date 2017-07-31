@@ -447,7 +447,7 @@ QSPRpred <- setRefClass("QSPRpred",
 
                 cat("Check of the SMILES strings in progress...\n")
                 for(sli in 1:length(smis)){
-                  mols <- parse.smiles(smis[[sli]], kekulise=kekulise)
+                  mols <- parse.smiles(as.character(smis[[sli]]), kekulise=kekulise)
                   mols.na <- which(is.na(mols)==T)
                   lmols.na <- length(mols.na)
                   if(lmols.na!=0){
@@ -465,7 +465,7 @@ QSPRpred <- setRefClass("QSPRpred",
                 Y <<- list()
                 for(sli in 1:length(smis)){
                   scale_init <- ifelse(scale[sli], T, F)
-                  Xlist <- get_descriptor(smis = smis[[sli]], desctypes = fnames[[sli]], scale = scale[sli], scale_init = scale_init)
+                  Xlist <- get_descriptor(smis = as.character(smis[[sli]]), desctypes = fnames[[sli]], scale = scale[sli], scale_init = scale_init)
                   X[[sli]] <<- Xlist[[1]] # features
                   Y[[sli]] <<- prop[[sli]] # properties
                   mdesc[[sli]] <<- as.numeric(Xlist[[2]])
@@ -615,7 +615,7 @@ QSPRpred <- setRefClass("QSPRpred",
                 mxnetavailable <- "mxnet"%in%rownames(installed.packages())
                 if("deeplearning"%in%model&&!mxnetavailable){
                   cat("Caution: You have requested deeplearning as a regression model, but the package mxnet is not installed.\n")
-                  cat("Please, go to http://mxnet.io/get_started/setup.html for installing mxnet for your system.\n\n")
+                  cat("Please, go to http://mxnet.io for installing mxnet for your system.\n\n")
                   return(NULL)
                 }
 
@@ -739,7 +739,7 @@ QSPRpred <- setRefClass("QSPRpred",
                 predy <- c()
                 predvar <- c()
                 for(sli in 1:length(X)){
-                  newx <- get_descriptor(smis = smis, desctypes = fnames[[sli]],
+                  newx <- get_descriptor(smis = as.character(smis), desctypes = fnames[[sli]],
                                          scale = scale[sli], scale_init = FALSE,
                                          mdesc = mdesc[[sli]], sddesc = sddesc[[sli]])[[1]]
 

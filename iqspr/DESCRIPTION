@@ -5,7 +5,7 @@ Author: Guillaume Lambard [aut, cre],
         Hisaki Ikebata [cre],
         Ryo Yoshida [cre]
 Maintainer: Guillaume Lambard <lambard@ism.ac.jp>
-Description: iqspr is devoted to the autonomous generation of novel organic compounds with target physico-chemical properties 
+Description: Autonomous generation of novel organic compounds with target physicochemical properties 
  initially constrained by the user. This package has the ambition to become an unavoidable tool in the innovation of novel 
  materials and/or drugs with specific target properties. 
 Depends: R (>= 3.3.3), 
@@ -24,7 +24,7 @@ Imports: methods,
 License: MIT + file LICENSE
 SystemRequirements: JAVA JDK 1.7 or higher for rcdk, 
   OpenBabel (>= 2.3.1) with headers, http://openbabel.org,
-  mxnet (>= 0.9.4) for the deep learning capabilities, http://mxnet.io/get_started/setup.html
+  mxnet (>= 0.9.4) for the deep learning capabilities, http://mxnet.io
 Suggests: knitr,
     rmarkdown
 Encoding: UTF-8

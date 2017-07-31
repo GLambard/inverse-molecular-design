@@ -56,6 +56,7 @@
 #'
 #' @import methods
 #' @importFrom graphics abline plot rasterImage
+#' @importFrom utils packageVersion
 #' @importFrom methods new
 #' @export SmcChem
 #' @exportClass SmcChem
@@ -258,10 +259,15 @@ SmcChem <- setRefClass("SmcChem",
 
     update_particles = function(){
       csmi <- sapply(esmi, function(x) x$get_validsmi())
-      isvalid[which(sapply(csmi, function(x) class(try(parse.smiles(x, kekulise=T), silent=T))!="list"))] <<- F
+      isvalid[which(sapply(csmi, function(x) class(try(parse.smiles(as.character(x), kekulise=T), silent=T))!="list"))] <<- F
       idx <- which(isvalid==T)
-      mols <- parse.smiles(csmi[idx], kekulise=T)
-      csmi[idx] <-  sapply(mols, function(x) get.smiles(x, aromatic=T))
+      mols <- parse.smiles(as.character(csmi[idx]), kekulise=T)
+      rcdk_version <- as.numeric(gsub("\\.","",packageVersion("rcdk")))
+      if(rcdk_version > 338){
+        csmi[idx] <-  sapply(mols, function(x) get.smiles(x))
+      } else {
+        csmi[idx] <-  sapply(mols, function(x) get.smiles(x, aromatic = T, type = 'generic'))
+      }
 
       invpredtemp <- qsprpred$iqspr_predict(csmi[idx], temp)
 
@@ -313,8 +319,13 @@ SmcChem <- setRefClass("SmcChem",
       "get SMILES strings from the SmcChem object (same as get_smiles function) "
       csmi <- sapply(esmi, function(x) x$get_validsmi())
       idx <- which(isvalid==T)
-      mols <- parse.smiles(csmi[idx], kekulise=T)
-      csmi[idx] <-  sapply(mols, function(x) get.smiles(x, aromatic=T))
+      mols <- parse.smiles(as.character(csmi[idx]), kekulise=T)
+      rcdk_version <- as.numeric(gsub("\\.","",packageVersion("rcdk")))
+      if(rcdk_version > 338){
+        csmi[idx] <-  sapply(mols, function(x) get.smiles(x, flavor = smiles.flavors(c('Generic','UseAromaticSymbols'))))
+      } else {
+        csmi[idx] <-  sapply(mols, function(x) get.smiles(x, aromatic = T, type = 'generic'))
+      }
       csmi
     },
 
@@ -367,7 +378,7 @@ SmcChem <- setRefClass("SmcChem",
       smisl <- length(tsmi)
       rcdk_version <- as.numeric(gsub("\\.","",packageVersion("rcdk")))
       for(i in 1:smisl){
-        mol <- parse.smiles(tsmi[i], kekulise = T)[[1]] # if kekulise = F, aromatic rings are missed!
+        mol <- parse.smiles(as.character(tsmi[i]), kekulise = T)[[1]] # if kekulise = F, aromatic rings are missed!
         if(rcdk_version > 338){
           dep <- get.depictor(width=500, height=500, zoom=3)
           im_temp <- view.image.2d(molecule=mol,depictor=dep)

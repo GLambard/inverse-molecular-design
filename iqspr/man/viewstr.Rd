@@ -9,6 +9,16 @@ viewstr(smis = NULL, width = 500, height = 500, nrow = 2, ncol = 2,
 }
 \arguments{
 \item{smis}{is a SMILES strings vector to submit.}
+
+\item{width}{of the picture}
+
+\item{height}{of the picture}
+
+\item{nrow}{is the number of rows for the table of molecular depictions}
+
+\item{ncol}{is the number of columns for the table of molecular depictions}
+
+\item{legend}{is the text to appear for each molecular depiction in the top left corner}
 }
 \value{
 a plot of requested 2D structures.

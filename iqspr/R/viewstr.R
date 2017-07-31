@@ -1,11 +1,20 @@
 #'view 2D structures from SMILES string vector
 #' @description View 2D structures from SMILES strings vector
 #' @param smis is a SMILES strings vector to submit.
+#' @param width of the picture
+#' @param height of the picture
+#' @param nrow is the number of rows for the table of molecular depictions
+#' @param ncol is the number of columns for the table of molecular depictions
+#' @param legend is the text to appear for each molecular depiction in the top left corner
 #'
 #' @examples viewstr(c("c1ccc2ccc3c(NCCN(C)C)cc(nc3c2c1)", "c1ccc2ccc3c(NCCN(CC)CCCl)cc(nc3c2c1)",
 #'  "c1ccc2ccc3c(NC(CC)CC)cc(nc3c2c1)", "c1ccc2ccc3c(c2c1)ncc(c3NCCNCC=CCCCC)"))
 #'
 #' @return a plot of requested 2D structures.
+#'
+#' @importFrom graphics par
+#' @importFrom utils packageVersion
+#' @import rcdk
 #'
 #' @export viewstr
 
@@ -15,7 +24,7 @@ viewstr <- function(smis = NULL, width = 500, height = 500, nrow = 2, ncol = 2, 
   smisl <- length(smis)
   rcdk_version <- as.numeric(gsub("\\.","",packageVersion("rcdk")))
   for(i in 1:smisl){
-    mol <- parse.smiles(smis[i], kekulise = T)[[1]] # if kekulise = F, aromatic rings are missed!
+    mol <- parse.smiles(as.character(smis[i]), kekulise = T)[[1]] # if kekulise = F, aromatic rings are missed!
     if(rcdk_version > 338){
       dep <- get.depictor(width=width, height=height, zoom=3)
       temp <- view.image.2d(molecule=mol,depictor=dep)

@@ -39,8 +39,8 @@ properties <- qsprpred_env$get_props()
 length(properties)
 lapply(properties,dim)
 
-## ---- eval=TRUE, include=TRUE--------------------------------------------
-qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  qsprpred_env$model_training(model=c("linear_Bayes","ranger"),params=list(list(NA),list("num.trees" = 200)),n_boot=10,s_boot = 0.85,r_boot = F,parallelize=T)
 
 ## ------------------------------------------------------------------------
 get_Models()
@@ -51,8 +51,11 @@ get_Model_params("elasticnet")
 ## ------------------------------------------------------------------------
 get_Model_params("ranger")
 
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  predictions <- qsprpred_env$qspr_predict(smis[testidx])
+
 ## ------------------------------------------------------------------------
-predictions <- qsprpred_env$qspr_predict(smis[testidx])
+data("predictions")
 
 ## ------------------------------------------------------------------------
 # Example for 4 compounds
@@ -63,7 +66,7 @@ cat("\nVariances:\n")
 rownames(predictions[[2]]) <- c("E","HOMO-LUMO gap")
 predictions[[2]][,1:4] # variances
 
-## ----fig.width=8, fig.height=4, fig.align='center'-----------------------
+## ---- fig.width=8, fig.height=4, fig.align='center'----------------------
 d1 <- data.frame(predictions[[1]][1,],prop[testidx,"E"],sqrt(predictions[[2]][1,]))
 colnames(d1) <- c("pred","prop","sd")
 d2 <- data.frame(predictions[[1]][2,],prop[testidx,"HOMO-LUMO gap"],sqrt(predictions[[2]][2,]))
@@ -96,39 +99,47 @@ p2 <- ggplot(data = d2, aes(x = pred, y = prop, size = sd)) + geom_point(color="
 
 grid.arrange(p1,p2,ncol=2)
 
-## ------------------------------------------------------------------------
-qsprpred_env$model_training(model=c("linear_Bayes"),params=NA) # linear_Bayes prevails here for quick execution
-targ.min <- c(50,2)
-targ.max <- c(250,4)
-qsprpred_env$set_target(targ.min,targ.max)
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  qsprpred_env$model_training(model=c("linear_Bayes"),params=NA) # linear_Bayes prevails here for quick execution
+#  targ.min <- c(50,2)
+#  targ.max <- c(250,4)
+#  qsprpred_env$set_target(targ.min,targ.max)
 
 ## ---- eval=FALSE, include=TRUE-------------------------------------------
 #  data("trainedSMI")
 #  engram_5k <- ENgram$new(trainedSMI, order=10)
 
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  data("engram_5k")
+#  smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,3))
+
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  for(i in 1:200){
+#    smchem$smcexec(niter = 1, nsteps = 5, preorder = 0.2)
+#  }
+
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  gensmis <- smchem$get_hiscores(nsmi=2000, exsim=0.9)
+
 ## ------------------------------------------------------------------------
-data("engram_5k")
-smchem <- SmcChem$new(smis = rep("c1ccccc1O", 25), v_qsprpred = qsprpred_env, v_engram = engram_5k, v_temp=c(30,3))
-
-## ---- results='hide'-----------------------------------------------------
-for(i in 1:50){
-  smchem$smcexec(niter = 1, nsteps = 5, preorder = 0.2)
-}
-
-## ---- results='hide'-----------------------------------------------------
-gensmis <- smchem$get_hiscores(nsmi=200, exsim=0.9)
-
-## ------------------------------------------------------------------------
+data("gensmis")
 head(gensmis)
 
-## ---- fig.width=4, fig.height=4, fig.align='center'----------------------
-pred <- qsprpred_env$qspr_predict(gensmis[,1])
-predmat <- t(pred[[1]]) 
+## ---- eval=FALSE, include=TRUE-------------------------------------------
+#  pred <- qsprpred_env$qspr_predict(gensmis[,1])
+#  predmat <- t(pred[[1]])
+#  
+#  dpred <- data.frame(predmat)
+#  colnames(dpred) <- c("E","HOMOLUMOgap")
+#  predinit <- (t(qsprpred_env$qspr_predict("c1ccccc1O")[[1]]))
+#  colnames(predinit) <- c("E","HOMOLUMOgap")
 
-dpred <- data.frame(predmat)
-colnames(dpred) <- c("E","HOMOLUMOgap")
-predinit <- (t(qsprpred_env$qspr_predict("c1ccccc1O")[[1]]))
-colnames(predinit) <- c("E","HOMOLUMOgap")
+## ---- fig.width=4, fig.height=4, fig.align='center'----------------------
+data("dpred")
+data("predinit")
+
+targ.min <- c(50,2)
+targ.max <- c(250,4)
 ggplot(data = dt, aes(x = E, y = HOMOLUMOgap)) + geom_point(size=0.4, color="black") + 
   annotate("rect", xmin=targ.min[1], xmax=targ.max[1], ymin=targ.min[2], ymax=targ.max[2], alpha=0.2, color="blue", fill="blue") +
   geom_point(data = dpred, aes(x = E, y = HOMOLUMOgap), size=0.4, color="red") +
