@@ -42,6 +42,8 @@ install_version("rcdk", version="3.3.8", repos="http://cran.us.r-project.org")
 install_github("GLambard/inverse-molecular-design",subdir="iqspr")
 ```
 
+That's it! You can now use ```iqspr``` by following the tutorial delivered with the package (in *Packages* tab, click on the ```iqspr``` package in RStudio. Then, refer to the *user guide, package vignettes and other documentation*.)
+
 # How does it work
 
 The __iqspr__ package takes initial datasets of SMILES with their known physico-chemical properties (HOMO-LUMO gap, internal energy, melting point, toxicity, solubility, etc.) as input. Then, the SMILES are transformed in their corresponding descriptors to construct a vector of features per compound. Linear or non-linear regression models are then trained with these vectors in input, and given properties in output, to form the forward prediction model. This done, the natural language processing principle is used to build n-grams from a list of known SMILES to build a chemical grammar. Once the model for the chemical grammar is 
