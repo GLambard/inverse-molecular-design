@@ -24,12 +24,21 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 
 OpenBabel is compulsory to the check of the validity for the generated SMILES and their re-ordering. 
 
-* __(Optional)__ Install mxnet >= 0.9.4 for the deep learning regression capabilities from [here](http://mxnet.io/get_started/setup.html).
+* __(Optional)__ Install ```mxnet``` >= 0.9.4 for the deep learning capabilities from [here](http://mxnet.io/get_started/setup.html).
 
-* Finally, install ```iqspr``` by using the package ```devtools```
+* Install the ```devtools``` package in RStudio
 ```R
-install.packages("devtools") # if you don't already have it
+install.packages("devtools")
 library(devtools)
+```
+
+* __(Recommended)__ Install ```rcdk``` == 3.3.8 and dependencies for better compatibilities in RStudio
+```R
+install_version("rcdk", version="3.3.8", repos="http://cran.us.r-project.org")
+```
+
+* Finally, install ```iqspr``` in RStudio
+```R
 install_github("GLambard/inverse-molecular-design",subdir="iqspr")
 ```
 
