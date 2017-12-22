@@ -12,11 +12,71 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 
 # Let's get started
 
+## Docker image (Highly recommended)
+
+* Install Docker (latest) for your OS from [here](https://docs.docker.com/engine/installation/)
+* For MAC/Windows users, take note of the IP address allocated to the virtual machine. For this, open a terminal window to type:
+```bash 
+docker-machine ls
+```
+In output, note the IP address indicated in the ```URL``` column as: ```tcp://<IP_address>:<...>```
+
+If the ```URL``` column is empty and the ```STATE``` is ```Stopped```, enter: 
+```bash
+docker-machine start default
+```
+And follow the suggestions given in output. 
+
+Then, do:
+```bash
+docker-machine ip default 
+```
+that returns the IP address you previously obtained. Linux (MAC) users can also use ```localhost``` in the place of this   
+IP address. 
+
+Then, make a directory where your work will be saved. For example (for Linux/MAC users): 
+```bash
+mkdir -p /Users/<user_name>/Documents/dockerspace
+```
+or (Windows users):
+```bash
+md md c:\dockerspace
+```
+Then, change the permission on the created directory, such like (Linux/MAC users):
+```bash
+chmod 777 /Users/<user_name>/Documents/dockerspace
+```
+or (Windows users):
+```bash
+icacls "c:\dockerspace" /grant Users:F
+```
+You will then be able to share files created in the Docker container with your machine, or the opposite. 
+
+Finally, run the container via: 
+```bash
+sudo docker run -d -p 8787:8787 -e ROOT=TRUE -v /Users/<user_name>/Documents/dockerspace:/home/rstudio/dockerspace --name iqspr_shared lambard/iqspr
+```
+(Windows users do not need to use ```sudo```)
+
+This should take few minutes for the downloading of the Docker image of ```iqspr```. Then, open a window on your web browser, and the address type: 
+```bash
+localhost:8787
+```
+or, 
+```bash
+<IP_address>:8787
+```
+This should open a virtual session of RStudio in your browser. To log in, use ```rstudio``` as username and password. 
+
+That's it! You can now use iqspr by following the tutorial delivered with the package (in Packages tab, click on the iqspr package in RStudio. Then, refer to the user guide, package vignettes and other documentation.)
+
+## Install from Source (highly depends on your system architecture)
+
 * Install R >= 3.3.3 from [here](https://www.r-project.org/)
 
 * Install RStudio from [here](https://www.rstudio.com/products/rstudio/download/#download)
 
-* Install JAVA JDK >= 1.7 from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
+* Install JAVA JDK <= 1.8 from [here](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 
 (for issues concerning the intallation of ```rJava```, a dependency of the ```rcdk``` package included in ```iqspr```, on MAC OS X, please follow these links [here](https://github.com/snowflakedb/dplyr-snowflakedb/wiki/Configuring-R-rJava-RJDBC-on-Mac-OS-X) and [here](http://stackoverflow.com/questions/30738974/rjava-load-error-in-rstudio-r-after-upgrading-to-osx-yosemite))
 
