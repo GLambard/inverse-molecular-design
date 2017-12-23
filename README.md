@@ -31,7 +31,7 @@ Then, do:
 ```bash
 docker-machine ip default 
 ```
-that returns the IP address you previously obtained. Linux (MAC) users can also use ```localhost``` in the place of this   
+that returns the IP address you previously obtained. Linux (MAC) users can also use ```localhost``` in place of this   
 IP address. 
 
 Then, make a directory where your work will be saved. For example (for Linux/MAC users): 
@@ -40,7 +40,7 @@ mkdir -p /Users/<user_name>/Documents/dockerspace
 ```
 or (Windows users):
 ```bash
-md md c:\dockerspace
+md c:\dockerspace
 ```
 Then, change the permission on the created directory, such like (Linux/MAC users):
 ```bash
@@ -58,7 +58,7 @@ sudo docker run -d -p 8787:8787 -e ROOT=TRUE -v /Users/<user_name>/Documents/doc
 ```
 (Windows users do not need to use ```sudo```)
 
-This should take few minutes for the downloading of the Docker image of ```iqspr```. Then, open a window on your web browser, and the address type: 
+This should take few minutes for the downloading of the Docker image of ```iqspr```. Then, open a window on your web browser, and for the address type: 
 ```bash
 localhost:8787
 ```
