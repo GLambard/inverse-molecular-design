@@ -15,23 +15,24 @@ __This package is entirely devoted to__ the inverse problem which is the backwar
 ## Docker image (Highly recommended)
 
 * Install Docker (latest) for your OS from [here](https://docs.docker.com/engine/installation/)
-* For MAC/Windows users, take note of the IP address allocated to the virtual machine. For this, open a terminal window to type:
+* Go to ```Preferences``` of Docker, then click on the ```Advanced``` tab, and allocae half of your ```CPUs``` and ```Memory``` ressources to Docker. Then, close the ```Preferences``` window.  
+* For MAC/Windows users, you'll need to take note of the IP address allocated to the virtual machine in which a Linux and all the necessary ressources to RStudio and iqspr are installed. For this, open a terminal window to type:
 ```bash 
 docker-machine ls
 ```
-In output, note the IP address indicated in the ```URL``` column as: ```tcp://<IP_address>:<...>```
+In output, note the IP address indicated in the ```URL``` column such as: ```tcp://<IP_address>:<...>```
 
 If the ```URL``` column is empty and the ```STATE``` is ```Stopped```, enter: 
 ```bash
 docker-machine start default
 ```
-And follow the suggestions given in output. 
+And follow the suggestions given in output. This should take few minutes for the IP allocation.  
 
 Then, do:
 ```bash
 docker-machine ip default 
 ```
-that returns the IP address you previously obtained. Linux (MAC) users can also use ```localhost``` in place of this   
+that returns the IP address you previously noted. Linux/MAC users can also just use ```localhost``` in place of this   
 IP address. 
 
 Then, make a directory where your work will be saved. For example (for Linux/MAC users): 
@@ -50,15 +51,16 @@ or (Windows users):
 ```bash
 icacls "c:\dockerspace" /grant Users:F
 ```
-You will then be able to share files created in the Docker container with your machine, or the opposite. 
+You will now be able to share files between the Docker container and your machine. All the output files created or readable in the Docker container will be located in this directory or its sub-directories. 
 
 Finally, run the container via: 
 ```bash
-sudo docker run -d -p 8787:8787 -e ROOT=TRUE -v /Users/<user_name>/Documents/dockerspace:/home/rstudio/dockerspace --name iqspr_shared lambard/iqspr
+sudo docker run -d -p 8787:8787 -e ROOT=TRUE -v <working_directory>:/home/rstudio/dockerspace --name iqspr_shared lambard/iqspr
 ```
 (Windows users do not need to use ```sudo```)
+```<working_directory>``` is the directory created above. Please, respect the following naming ```/home/rstudio/<dockerspace_directory>``` for the shared directory in the Docker container. 
 
-This should take few minutes for the downloading of the Docker image of ```iqspr```. Then, open a window on your web browser, and for the address type: 
+This should take few minutes for the downloading of the Docker image for ```iqspr```. Then, open a window on your web browser, and for the address type: 
 ```bash
 localhost:8787
 ```
@@ -66,7 +68,7 @@ or,
 ```bash
 <IP_address>:8787
 ```
-This should open a virtual session of RStudio in your browser. To log in, use ```rstudio``` as username and password. 
+This should open a virtual session of RStudio in your browser. To log in, just use ```rstudio``` as username and password.
 
 That's it! You can now use iqspr by following the tutorial delivered with the package (in Packages tab, click on the iqspr package in RStudio. Then, refer to the user guide, package vignettes and other documentation.)
 
