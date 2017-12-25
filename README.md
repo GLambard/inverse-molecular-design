@@ -72,7 +72,7 @@ This should open a virtual session of RStudio in your browser. To log in, just u
 
 That's it! You can now use iqspr by following the tutorial delivered with the package (in Packages tab, click on the iqspr package in RStudio. Then, refer to the user guide, package vignettes and other documentation.)
 
-## Install from Source (highly depends on your system architecture)
+## Install from Source (iqspr v2.3 (obsolete) - highly depends on your system architecture)
 
 * Install R >= 3.3.3 from [here](https://www.r-project.org/)
 
