@@ -72,6 +72,38 @@ This should open a virtual session of RStudio in your browser. To log in, just u
 
 That's it! You can now use iqspr by following the tutorial delivered with the package (in Packages tab, click on the iqspr package in RStudio. Then, refer to the user guide, package vignettes and other documentation.)
 
+### For Docker image updates
+You'll have to stop and erase the running ```iqspr``` container, then erase the ```iqspr``` Docker image, to finally install the latest version, as follows:
+* Note the container ID of the currently running ```iqspr``` image with:
+```bash
+sudo docker ps 
+```
+(if the container is already stopped, ```sudo docker ps -a``` will do the job)
+* Then, stop and erase the container with:
+```bash
+sudo docker stop <container_ID>
+```
+Followed by, 
+```bash
+sudo docker rm <container_ID>
+```
+In this process, your working directory ```dockerspace``` is not affected and can be re-used without loss of files. 
+Then, erase the current image from Docker with:
+```bash
+sudo docker images
+```
+to note the image's name, and
+```bash
+sudo docker rmi <image_name>
+```
+```<image_name>``` should be ```lambard/iqspr``` except if you tagged it with another name. 
+
+Finally, re-run the ```iqspr``` Docker image with:
+```bash
+sudo docker run -d -p 8787:8787 -e ROOT=TRUE -v <working_directory>:/home/rstudio/dockerspace --name iqspr_shared lambard/iqspr
+```
+The latest ```iqspr``` Docker image is installed and ready. 
+
 ## Install from Source (iqspr v2.3 (obsolete) - highly depends on your system architecture)
 
 * Install R >= 3.3.3 from [here](https://www.r-project.org/)
